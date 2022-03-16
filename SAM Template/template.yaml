@@ -1,0 +1,80 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: 
+Resources:
+
+  ServerlessAPI:
+    Type: AWS::Serverless::Api
+    Properties:
+        Cors: "'*'"
+        DefinitionBody: String
+        DefinitionUri: String | ApiDefinition
+        Models:
+          Visit:
+            type: object
+            properties:
+              Name:
+                type: string
+              Visitors:
+                type: integer
+        Name: String
+        OpenApiVersion: String
+        StageName: prod
+        TracingEnabled: Boolean
+        Variables: Map
+  ServerlessAPI2:
+    Type: 'AWS::ApiGateway::RestApi'
+    Properties:
+      Body: Json
+      Description: crc dynamoDB API
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+      Name: Serverless API
+  VisitModel:
+    Type: 'AWS::ApiGateway::Model'
+    Properties:
+      RestApiId: !Ref ServerlessAPI2
+      ContentType: application/json
+      Description: Schema for visit
+      Name: Visit
+      Schema:
+        $schema: 'http://json-schema.org/draft-04/schema#'
+        title: Visit
+        type: object
+        items:
+          type: object
+          properties:
+            number:
+              type: integer
+            class:
+              type: string
+            salesPrice:
+              type: number
+  updateVisitDataNode:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: index.handler
+      Runtime: nodejs14.x
+      CodeUri: .                              #needed
+      Description: ''
+      MemorySize: 128
+      Timeout: 3
+      Role: 'arn:aws:iam::103469772721:role/LambdaDynamoDBRole'
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /serverless
+            Method: PUT
+            RestApiId: !Ref ServerlessAPI
+  DynamoDBTable:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+        PrimaryKey:
+          Name: Name
+          Type: String
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        TableName: Serverless
